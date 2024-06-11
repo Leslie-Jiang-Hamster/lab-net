@@ -110,8 +110,9 @@ e1000_transmit(struct mbuf *m)
 
   // Then check if the the ring is overflowing. If E1000_TXD_STAT_DD is not set in the descriptor indexed by E1000_TDT,
   // the E1000 hasn't finished the corresponding previous transmission request, so return an error.
-  if (!(E1000_TXD_STAT_DD & next_packet_descriptor.status))
+  if (!(E1000_TXD_STAT_DD & next_packet_descriptor.status)) {
     return -1;
+  }
   
   // Otherwise, use mbuffree() to free the last mbuf that was transmitted from that descriptor (if there was one).
   if (tx_mbufs[next_packet_index] != (void *)0)
@@ -126,6 +127,7 @@ e1000_transmit(struct mbuf *m)
 
   // Finally, update the ring position by adding one to E1000_TDT modulo TX_RING_SIZE.
   regs[E1000_TDT] = (next_packet_index + 1) % TX_RING_SIZE;
+  __sync_synchronize();
 
   return 0;
 }
@@ -163,6 +165,9 @@ e1000_recv(void)
 
   // Finally, update the E1000_RDT register to be the index of the last ring descriptor processed.
   regs[E1000_RDT] = next_packet_index;
+  __sync_synchronize();
+
+  e1000_recv();
 }
 
 void
